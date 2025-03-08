@@ -1,0 +1,37 @@
+-- Services
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Variables
+
+local Remotes = ReplicatedStorage.Remotes
+local NPCNodes = workspace:WaitForChild("NPCNodes")
+
+-- Runtime
+
+function compileNodes()
+    local nodes = {}
+
+    for _, node in NPCNodes:GetChildren() do
+        local connectedids = {}
+        for _, id in node:GetChildren() do
+            if id.Name ~= "ConnectedId" or not id:IsA("IntValue") then continue end
+            table.insert(connectedids, id.Value)
+        end
+    
+        table.insert(nodes, {
+            position = node.Position,
+            accessible = node:GetAttribute("Accessible"),
+            nodetype = node:GetAttribute("NodeType"),
+            connectedids = connectedids,
+            nodeid = tonumber(node.Name),
+        })
+    end
+
+    return nodes
+end
+
+for _, node in NPCNodes:GetChildren() do
+    node.Transparency = 1
+end
+Remotes.RequestNPCNodes.OnServerInvoke = compileNodes
