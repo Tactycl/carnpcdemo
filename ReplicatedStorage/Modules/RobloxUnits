@@ -1,0 +1,29 @@
+-- Variables
+
+local types = require(script.Types)
+local units = {}
+
+-- PUBLIC
+
+function units.convertUnits(valueA : number, unitA : types.unit, unitB : types.unit)
+	if unitA == unitB then return valueA end
+	if unitA == "studs" and unitB == "meter" then
+		return valueA * types.meter
+		
+	elseif unitA == "meter" and unitB == "studs" then
+		return valueA / types.meter
+		
+	elseif unitA == "NM_torque" and unitB == "rbx_torque" then
+		return valueA * types.newtonMeterTorque
+		
+	elseif unitA == "rbx_torque" and unitB == "NM_torque" then
+		return valueA / types.newtonMeterTorque
+		
+	elseif (unitA == "rbx_mass" and unitB == "kg") or (unitA == "kg" and unitB == "rbx_mass") then
+		return valueA
+	end
+	
+	return error("invalid combination")
+end
+
+return units
