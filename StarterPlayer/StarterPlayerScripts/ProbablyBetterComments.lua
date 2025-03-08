@@ -39,7 +39,7 @@ cameraParams.RespectCanCollide = true
 -- Runtime
 
 -- custom lerp function for numbers, because roblox doesn't have a built in function for that.
-function lerp(a, b, t)
+local function lerp(a, b, t)
 	return a + (b - a) * t
 end
 
@@ -48,7 +48,7 @@ Finds the player's vehicle by humanoid.
 It removes a vehicle once it has none of the basic components a car should have, so the client doesn't further check them.
 At first it checks if the player has a character and humanoid, I did this to avoid erroring.
 ]]
-function FindVehicle(player)
+local function FindVehicle(player)
 	if player == nil or player.Character == nil or player.Character:FindFirstChild("Humanoid") == nil then
 		return
 	end
@@ -72,14 +72,14 @@ If so I make new physics so the car works and set the camera to scriptable becau
 Otherwise your settings get reset to default, for example if you leave a car. I don't have a "getting out"
 system yet, but I wanted to implement it in the future, so I did that here.
 ]]
-function onSeated(isSeated, seat)
+local function onSeated(isSeated, seat)
 	local isCarSeat = seat and seat.Parent.Name == "Base" and seat:IsDescendantOf(Vehicles)
 
 	if currentCarPhysics then
 		currentCarPhysics:remove()
 		currentCarPhysics = nil
 	end
-	
+
 	if isSeated and isCarSeat then
 		currentCarPhysics = CarClient.init(seat.Parent.Parent)
 		camera.CameraType = Enum.CameraType.Scriptable
@@ -95,14 +95,14 @@ end
 --[[
 This just handles the sit event and setting some variables for other functions to use.
 ]]
-function CharacterAdded(char)
+local function CharacterAdded(char)
 	Character = char
 	Humanoid = char:WaitForChild("Humanoid") :: Humanoid
 
 	if Humanoid.SeatPart ~= nil then
 		onSeated(true, Humanoid.SeatPart)
 	end
-	
+
 	Humanoid:GetPropertyChangedSignal("SeatPart"):Connect(function()
 		onSeated(true, Humanoid.SeatPart)
 	end)
@@ -112,17 +112,17 @@ end
 This gets the computer steering (-1 to 1), which I use twice and didn't want to have written out four times.
 I did this so I don't have to write it four times or have two boolean variables and check with them when you begin or end input.
 ]]
-function getComputerSteer()
+local function getComputerSteer()
 	return (UserInputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.A) and 1 or 0)
 end
 
 --[[
 This function adjusts angles from in a range from -180° to 180°, so the camera doesn't do a full 360° rotation back when you move your camera.
 ]]
-function adjustAngleWraparound(angle)
+local function adjustAngleWraparound(angle)
 	if angle > math.pi then
 		return angle - (2 * math.pi)
-		
+
 	elseif angle < -math.pi then
 		return angle + (2 * math.pi)
 	end
@@ -138,7 +138,7 @@ I also want it to be easier, for example, if someone else needed a new camera. T
 name it the index and move it to the position you want it to be relative to the car.
 At the bottom it does some raycasting to prevent clipping inside walls or similar.
 ]]
-function updateCamera(delta)
+local function updateCamera(delta)
 	local alpha = 3 * delta
 	camGoalX = math.clamp(camGoalX, math.rad(-70), math.rad(20))
 
@@ -210,20 +210,20 @@ This gets the name of the gear you're currently in to be displayed on the GUI.
 I did this so I don't have to do this in a different function. I split it into two
 for better readability.
 ]]
-function getGearDefinition()
+local function getGearDefinition()
 	if currentCarPhysics.parked then
 		return "P"
-		
+
 	elseif currentCarPhysics.currentGear == -1 then
 		return "R"
-		
+
 	elseif currentCarPhysics.currentGear == 0 then
 		return "N"
-		
+
 	elseif currentCarPhysics.config.AUTOMATIC then
 		return "A" .. currentCarPhysics.currentGear
 	end
-	
+
 	return "M" .. currentCarPhysics.currentGear
 end
 
@@ -232,7 +232,7 @@ This updates the UI every frame with a delta variable (deltaTime).
 I did this so you can see your rpm? I don't really know what to explain here. I just show the km/h, rpm meter and that's all.
 This is so users can better see when to shift in manual shifting mode.
 ]]
-function updateUI(delta)
+local function updateUI(delta)
 	local delta60 = delta * 60
 	local goalRotation = lerp(currentCarPhysics.UI_START_ROTATION, currentCarPhysics.UI_END_ROTATION, currentCarPhysics.currentRPM / (currentCarPhysics.UI_RPM_ITEMS * 1000))
 
@@ -251,12 +251,25 @@ function updateUI(delta)
 end
 
 --[[
+Removes a render with a function, I did this so I can more easily remove one.
+]]
+local function removeRender(car)
+	if not renderSetUps[car] then
+		return
+	end
+
+	renderSetUps[car][1]:Disconnect()
+	renderSetUps[car][2]:removeVisuals()
+	renderSetUps[car] = nil
+end
+
+--[[
 I did this so the code which uses it is more readable.
 It puts a table with the index of the car into "renderSetUps".
 A table with indexes because there can be multiple cars.
 I did the print for debugging.
 ]]
-function initRender(car)
+local function initRender(car)
 
 	renderSetUps[car] = {
 		RunService.Heartbeat:Connect(function(delta)
@@ -282,19 +295,6 @@ function initRender(car)
 
 		CarClient.initVisuals(car),
 	}
-end
-
---[[
-Removes a render with a function, I did this so I can more easily remove one.
-]]
-function removeRender(car)
-	if not renderSetUps[car] then
-		return
-	end
-	
-	renderSetUps[car][1]:Disconnect()
-	renderSetUps[car][2]:removeVisuals()
-	renderSetUps[car] = nil
 end
 
 --[[
@@ -465,7 +465,7 @@ RunService.RenderStepped:Connect(function(delta)
 	if not currentCarPhysics then
 		return
 	end
-	
+
 	if currentCarPhysics.Vehicle == nil then
 		currentCarPhysics = nil
 		return
