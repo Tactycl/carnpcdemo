@@ -1,0 +1,32 @@
+-- Services
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Variables
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local LocalPlayer = Players.LocalPlayer
+local SettingsFolder = LocalPlayer:WaitForChild("Settings")
+
+local updatedBindable : BindableEvent = Instance.new("BindableEvent") or script:FindFirstChild("updated")
+updatedBindable.Name = "updated"
+updatedBindable.Parent = script
+
+local config = {}
+
+-- Runtime
+
+function config.update()
+	for _, obj in SettingsFolder:GetChildren() do
+		config[obj.Name] = obj:GetAttribute("Type") == "keyinput" and Enum.KeyCode:FromValue(obj.Value) or obj.Value
+	end
+	updatedBindable:Fire()
+end
+
+config.updated = updatedBindable.Event
+Remotes:WaitForChild("UpdateSettings").OnClientEvent:Connect(config.update)
+config.update()
+
+return config
