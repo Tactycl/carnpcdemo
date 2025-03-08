@@ -37,10 +37,12 @@ cameraParams.RespectCanCollide = true
 
 -- Runtime
 
+-- Roblox :Lerp but for numbers
 function lerp(a, b, t)
 	return a + (b - a) * t
 end
 
+-- finds player vehicle by going through all cars and looking if the seat's occupant is the player's humanoid
 function FindVehicle(player)
 	if player == nil or player.Character == nil or player.Character:FindFirstChild("Humanoid") == nil then return end
 
@@ -53,6 +55,7 @@ function FindVehicle(player)
 	end
 end
 
+-- is being called later in the script whenever the player sits down, checks if it's a car and then inits the new car physics and removes an old one (if exists)
 function onSeated(isSeated, seat)
 	local isCarSeat = seat and seat.Parent.Name == "Base" and seat:IsDescendantOf(Vehicles)
 
@@ -69,6 +72,7 @@ function onSeated(isSeated, seat)
 	end
 end
 
+-- always fires when player has a character added (used for firing/setting up onSeated)
 function CharacterAdded(char)
 	Character = char
 	Humanoid = char:WaitForChild("Humanoid") :: Humanoid
@@ -79,10 +83,12 @@ function CharacterAdded(char)
 	end)
 end
 
+-- Gets computer steering by the A and D keys (-1 to 1)
 function getComputerSteer()
 	return (UserInputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.A) and 1 or 0)
 end
 
+-- if angle > math.pi (180°) it wraps around to -180°, same for the opposite.
 function adjustAngleWraparound(angle)
 	if angle > math.pi then
 		return angle - (2 * math.pi)
@@ -92,6 +98,13 @@ function adjustAngleWraparound(angle)
 	return angle
 end
 
+--[[
+clamps camera X (vertical) by -70 and 20 degrees.
+It does the angle wrap around but with two variables being set inside.
+It changes the X and Y angle with a "lerp" where you could really use the lerp function, I don't know why I didn't. But it changes your camera with 3 * deltaTime as the alpha.
+It finds your current camera and if it isn't a free moving camera it's locked. If MB2 is pressed you move your camera around, it locks your cursor too.
+At the bottom it just sets the new CFRAME and does a raycast so your camera doesn't go through the wall.
+]]
 function updateCamera(delta)
 	local alpha = 3 * delta
 
@@ -157,6 +170,7 @@ function updateCamera(delta)
 	lastBaseAngularX, lastBaseAngularY = BaseAngularX, BaseAngularY
 end
 
+-- Gets the gears "Name" from the current physics for the GUI
 function getGearDefinition()
 	if currentCarPhysics.parked then return "P" end
 	if currentCarPhysics.currentGear == -1 then return "R" end
@@ -165,6 +179,7 @@ function getGearDefinition()
 	return "M" .. currentCarPhysics.currentGear
 end
 
+-- updates the GUI every frame like the gear "Name" with getGearDefinition and the RPM meter
 function updateUI(delta)
 	local delta60 = delta * 60
 	local goalRotation = lerp(currentCarPhysics.UI_START_ROTATION, currentCarPhysics.UI_END_ROTATION, currentCarPhysics.currentRPM / (currentCarPhysics.UI_RPM_ITEMS * 1000))
@@ -183,6 +198,7 @@ function updateUI(delta)
 	currentCarPhysics.UI.Main.Speed3.Text = splitSpeed[#splitSpeed] or "0"
 end
 
+-- renders visuals of a car, here it is the "Fixed" stuff, which are the wheel's brake for example
 function initRender(car)
 
 	renderSetUps[car] = {
@@ -209,6 +225,7 @@ function initRender(car)
 	}
 end
 
+-- removes a set up renderer (initRender) for cars being removed
 function removeRender(car)
 	if renderSetUps[car] then
 		renderSetUps[car][1]:Disconnect()
@@ -217,9 +234,19 @@ function removeRender(car)
 	end
 end
 
+-- inits all existing cars if player joins late
 for _, vehicle in Vehicles:GetChildren() do
 	initRender(vehicle)
 end
+
+--[[
+long script, more comments inside of it. Basically it detects input for computer and sets gas or brake to 1, uses getComputerSteer twice for when you press A or D.
+For gamepad it uses the thumbstick1 X position for steer.
+When the car is NOT automatic and you press the gear down or gear up button specified in your settings which you open with TAB, it gets the new GEAR ID and sets it.
+For GEAR UP it also does a random amount of backfire.
+"C" changes the camera in the current car client up by 1 and wraps back to 1 when you're above all camera ids. For example: you have 2 cameras, it goes 1, 2, 1 ...
+The flip car button specified in settings just adds some body force objects to get the car back on its wheels.
+]]
 
 local flipDebounce = false
 UserInputService.InputBegan:Connect(function(inp, gpe)
@@ -312,6 +339,7 @@ UserInputService.InputBegan:Connect(function(inp, gpe)
 	end
 end)
 
+-- detects whenever you stop pressing a button to stop the gas, brake, steer and handbrake
 UserInputService.InputEnded:Connect(function(inp, gpe)
 	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then return end
 
@@ -337,6 +365,7 @@ UserInputService.InputEnded:Connect(function(inp, gpe)
 	end
 end)
 
+-- basically just detects when the Triggers or Thumbsticks of a controller change input, used for steering, gas and brake
 UserInputService.InputChanged:Connect(function(inp, gpe)
 	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then return end
 
@@ -353,6 +382,7 @@ UserInputService.InputChanged:Connect(function(inp, gpe)
 	end
 end)
 
+-- runs every frame, checks if you have a car and the model of the car isn't nil (nothing), sets all haptic motors of a controller, updates the camera with a function and the GUI
 RunService.RenderStepped:Connect(function(delta)
 	if not currentCarPhysics then return end
 	if currentCarPhysics.Vehicle == nil then currentCarPhysics = nil return end
@@ -363,10 +393,12 @@ RunService.RenderStepped:Connect(function(delta)
 	updateUI(delta)
 end)
 
+-- some basic RBXScriptSignals
 Vehicles.ChildAdded:Connect(initRender)
 Vehicles.ChildRemoved:Connect(removeRender)
 LocalPlayer.CharacterAdded:Connect(CharacterAdded)
 
+-- This is used, since the car is on the client, for multiplayer lights, so others can see your lights. Which is also why "doesSendServer" here is false
 Remotes.CarLights.OnClientEvent:Connect(function(userid, lightName, lightActive)
 	local player = Players:GetPlayerByUserId(userid)
 	local vehicle = FindVehicle(player)
@@ -375,6 +407,7 @@ Remotes.CarLights.OnClientEvent:Connect(function(userid, lightName, lightActive)
 	CarClient:SetLights(vehicle, lightName, lightActive, false)
 end)
 
+-- This, similar to CarLights, is sent for multiplayer backfire
 Remotes.CarBackfire.OnClientEvent:Connect(function(userid)
 	local player = Players:GetPlayerByUserId(userid)
 	local vehicle = FindVehicle(player)
@@ -383,4 +416,5 @@ Remotes.CarBackfire.OnClientEvent:Connect(function(userid)
 	CarClient:Backfire(vehicle, false)
 end)
 
+-- At the top it already waits if there is no character so CharacterAdded won't be fired, which is why we do this single call.
 CharacterAdded(Character)
