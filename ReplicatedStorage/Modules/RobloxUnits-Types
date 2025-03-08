@@ -1,0 +1,14 @@
+local units = {}
+
+export type unit = 
+	"studs" |
+	"meter" |
+	"kg" |
+	"rbx_mass" |
+	"rbx_torque" |
+	"NM_torque"
+
+units.meter = 3.571428571
+units.newtonMeterTorque = units.meter ^ 2
+
+return units
