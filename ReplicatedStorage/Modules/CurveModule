@@ -1,0 +1,60 @@
+-- [[ Variables ]]
+
+local curve = {}
+curve.__index = curve
+
+-- [[ Code ]]
+
+function curve.new()
+	local self = setmetatable({}, curve)
+	
+	self.keyframes = {}
+	
+	return self
+end
+
+function curve:Sort()
+	table.sort(self.keyframes, function(a, b)
+		return a[1] < b[1]
+	end)
+end
+
+function curve:InsertKeyframe(percentageInputted : number, percentageOutputted : number)
+	percentageInputted = math.clamp(percentageInputted, 0, 1)
+	percentageOutputted = math.clamp(percentageOutputted, 0, 1)
+	
+	table.insert(self.keyframes, {percentageInputted, percentageOutputted})
+	self:Sort()
+	
+	return self
+end
+
+function curve:InsertKeyframes(Keyframes)
+	self.keyframes = table.clone(Keyframes)
+	self:Sort()
+	return self
+end
+
+function curve:GetValue(point : number) : number
+	if #self.keyframes == 0 then return 0 end
+	
+	point = math.clamp(point, 0, 1)
+	local thisPoint
+	local nextPoint
+	local percentageToNextPoint = 0
+
+	for keyframeIndex, keyframeData in self.keyframes do
+		if keyframeData[1] > point then continue end
+		thisPoint = keyframeData
+		nextPoint = self.keyframes[ keyframeIndex + 1 ] or keyframeData
+	end
+	
+	if thisPoint == nil or nextPoint == nil then
+		return 0
+	end
+
+	percentageToNextPoint = thisPoint == nextPoint and 0 or (point - thisPoint[1]) / (nextPoint[1] - thisPoint[1])
+	return thisPoint[2] + ( nextPoint[2] - thisPoint[2] ) * percentageToNextPoint
+end
+
+return curve
