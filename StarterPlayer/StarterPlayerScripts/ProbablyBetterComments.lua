@@ -49,7 +49,9 @@ It removes a vehicle once it has none of the basic components a car should have,
 At first it checks if the player has a character and humanoid, I did this to avoid erroring.
 ]]
 function FindVehicle(player)
-	if player == nil or player.Character == nil or player.Character:FindFirstChild("Humanoid") == nil then return end
+	if player == nil or player.Character == nil or player.Character:FindFirstChild("Humanoid") == nil then
+		return
+	end
 
 	local tagged = CollectionService:GetTagged("Vehicle")
 	for _, vehicle in tagged do
@@ -73,7 +75,11 @@ system yet, but I wanted to implement it in the future, so I did that here.
 function onSeated(isSeated, seat)
 	local isCarSeat = seat and seat.Parent.Name == "Base" and seat:IsDescendantOf(Vehicles)
 
-	if currentCarPhysics then currentCarPhysics:remove() currentCarPhysics = nil end
+	if currentCarPhysics then
+		currentCarPhysics:remove()
+		currentCarPhysics = nil
+	end
+	
 	if isSeated and isCarSeat then
 		currentCarPhysics = CarClient.init(seat.Parent.Parent)
 		camera.CameraType = Enum.CameraType.Scriptable
@@ -93,7 +99,10 @@ function CharacterAdded(char)
 	Character = char
 	Humanoid = char:WaitForChild("Humanoid") :: Humanoid
 
-	if Humanoid.SeatPart ~= nil then onSeated(true, Humanoid.SeatPart) end
+	if Humanoid.SeatPart ~= nil then
+		onSeated(true, Humanoid.SeatPart)
+	end
+	
 	Humanoid:GetPropertyChangedSignal("SeatPart"):Connect(function()
 		onSeated(true, Humanoid.SeatPart)
 	end)
@@ -113,6 +122,7 @@ This function adjusts angles from in a range from -180° to 180°, so the camera
 function adjustAngleWraparound(angle)
 	if angle > math.pi then
 		return angle - (2 * math.pi)
+		
 	elseif angle < -math.pi then
 		return angle + (2 * math.pi)
 	end
@@ -145,7 +155,9 @@ function updateCamera(delta)
 	camY = lerp(camY, camGoalY, alpha)
 
 	local cam = currentCarPhysics.Vehicle.Base.Base.Cameras:FindFirstChild(currentCarPhysics.currentCamera)
-	if not cam then return end
+	if not cam then
+		return
+	end
 
 	if not cam:GetAttribute("Free") then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
@@ -199,10 +211,19 @@ I did this so I don't have to do this in a different function. I split it into t
 for better readability.
 ]]
 function getGearDefinition()
-	if currentCarPhysics.parked then return "P" end
-	if currentCarPhysics.currentGear == -1 then return "R" end
-	if currentCarPhysics.currentGear == 0 then return "N" end
-	if currentCarPhysics.config.AUTOMATIC then return "A" .. currentCarPhysics.currentGear end
+	if currentCarPhysics.parked then
+		return "P"
+		
+	elseif currentCarPhysics.currentGear == -1 then
+		return "R"
+		
+	elseif currentCarPhysics.currentGear == 0 then
+		return "N"
+		
+	elseif currentCarPhysics.config.AUTOMATIC then
+		return "A" .. currentCarPhysics.currentGear
+	end
+	
 	return "M" .. currentCarPhysics.currentGear
 end
 
@@ -241,7 +262,9 @@ function initRender(car)
 		RunService.Heartbeat:Connect(function(delta)
 			local success, errorMessage = pcall(function()
 				for _, wheel in car.Base.Wheels:GetChildren() do
-					if not wheel:IsA("BasePart") then continue end
+					if not wheel:IsA("BasePart") then
+						continue
+					end
 
 					local correspondingAttachment = car.Base.Base:FindFirstChild(wheel.Name)
 					local FixedAttachment = car.Base.Base:FindFirstChild("FixedAttachment" .. wheel.Name)
@@ -265,7 +288,9 @@ end
 Removes a render with a function, I did this so I can more easily remove one.
 ]]
 function removeRender(car)
-	if not renderSetUps[car] then return end
+	if not renderSetUps[car] then
+		return
+	end
 	
 	renderSetUps[car][1]:Disconnect()
 	renderSetUps[car][2]:removeVisuals()
@@ -286,7 +311,9 @@ The flip car button is used, so you don't need to rejoin if your car flips.
 ]]
 local flipDebounce = false
 UserInputService.InputBegan:Connect(function(inp, gpe)
-	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then return end
+	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then
+		return
+	end
 
 	if currentCarPhysics then
 		if inp.KeyCode == Enum.KeyCode.W or inp.KeyCode == Enum.KeyCode.ButtonR2 then
@@ -381,7 +408,9 @@ Stuff gets turned off as you don't press the button anymore.
 At the beginning I check for gamepad1 because roblox classifies it as a gameProcessedEvent
 ]]
 UserInputService.InputEnded:Connect(function(inp, gpe)
-	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then return end
+	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then
+		return
+	end
 
 	if currentCarPhysics then
 		if inp.KeyCode == Enum.KeyCode.W or inp.KeyCode == Enum.KeyCode.ButtonR2 then
@@ -410,7 +439,9 @@ This is used for inputs inbetween for example a thumbstick at 50% X axis would o
 This is just used for controller precision.
 ]]
 UserInputService.InputChanged:Connect(function(inp, gpe)
-	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then return end
+	if gpe and inp.UserInputType ~= Enum.UserInputType.Gamepad1 then
+		return
+	end
 
 	if currentCarPhysics then
 		if inp.KeyCode == Enum.KeyCode.ButtonR2 then
@@ -431,8 +462,14 @@ Sets haptic motors for better controller/console experience.
 Calls update functions.
 ]]
 RunService.RenderStepped:Connect(function(delta)
-	if not currentCarPhysics then return end
-	if currentCarPhysics.Vehicle == nil then currentCarPhysics = nil return end
+	if not currentCarPhysics then
+		return
+	end
+	
+	if currentCarPhysics.Vehicle == nil then
+		currentCarPhysics = nil
+		return
+	end
 
 	HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Large, math.clamp(currentCarPhysics.avgSlip / 20, 0, 1))
 	HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, math.clamp((currentCarPhysics.currentRPM - currentCarPhysics.previousRPM) / 400, 0, 1))
@@ -454,7 +491,9 @@ CarBackfire is an Unreliable one, car lights is a Reliable (normal) remote event
 Remotes.CarLights.OnClientEvent:Connect(function(userid, lightName, lightActive)
 	local player = Players:GetPlayerByUserId(userid)
 	local vehicle = FindVehicle(player)
-	if not vehicle then return end
+	if not vehicle then
+		return
+	end
 
 	CarClient:SetLights(vehicle, lightName, lightActive, false)
 end)
@@ -462,7 +501,9 @@ end)
 Remotes.CarBackfire.OnClientEvent:Connect(function(userid)
 	local player = Players:GetPlayerByUserId(userid)
 	local vehicle = FindVehicle(player)
-	if not vehicle then return end
+	if not vehicle then
+		return
+	end
 
 	CarClient:Backfire(vehicle, false)
 end)
